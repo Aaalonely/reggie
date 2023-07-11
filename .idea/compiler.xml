@@ -10,6 +10,9 @@
         <module name="reggie" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="reggie" target="11" />
+    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">

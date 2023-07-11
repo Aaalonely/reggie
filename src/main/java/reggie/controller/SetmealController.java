@@ -6,6 +6,7 @@ import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 import reggie.common.R;
 import reggie.dto.DishDto;
@@ -30,6 +31,8 @@ public class SetmealController {
     private CategoryService categoryService;
     @Autowired
     private SetmealDishService setmealDishService;
+    @Autowired
+    private RedisTemplate redisTemplate;
     @Value("${reggie.path}")
     private String basepath;
 
@@ -60,6 +63,8 @@ public class SetmealController {
     @PostMapping
     public R<String> insert(@RequestBody SetmealDto setmealDto){
         setmealService.saveAndDish(setmealDto);
+        String key = "dish_"+setmealDto.getCategoryId()+"_1";
+        redisTemplate.delete(key);
         return R.success("添加成功");
     }
 
@@ -115,13 +120,37 @@ public class SetmealController {
             }
             setmealDishService.saveBatch(list);
         }
+        String key = "dish_"+setmealDto.getCategoryId()+"_1";
+        redisTemplate.delete(key);
         return R.success("修改成功");
     }
     @GetMapping("/list")
-    public R<List<Setmeal>> list(Setmeal setmeal){
+    public R<List<SetmealDto>> list(Setmeal setmeal){
+        List<SetmealDto> setmealDtos = null;
+        String key = "dish_" + setmeal.getCategoryId() + "_" + setmeal.getStatus();
+        setmealDtos =(List<SetmealDto>) redisTemplate.opsForValue().get(key);
+        if(setmealDtos!=null){
+            return R.success(setmealDtos);
+        }
         LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(Setmeal::getCategoryId,setmeal.getCategoryId()).eq(Setmeal::getStatus,setmeal.getStatus());
+        queryWrapper.eq(Setmeal::getCategoryId, setmeal.getCategoryId());
+        queryWrapper.eq(Setmeal::getStatus, 1);
         queryWrapper.orderByDesc(Setmeal::getUpdateTime);
-        return R.success(setmealService.list(queryWrapper));
+        List<Setmeal> list = setmealService.list(queryWrapper);
+        setmealDtos = list.stream().map((item) -> {
+            SetmealDto setmealDto = new SetmealDto();
+            BeanUtils.copyProperties(item, setmealDto);
+            Long categoryId = item.getCategoryId();
+            Category category = categoryService.getById(categoryId);
+            if (category != null) {
+                setmealDto.setCategoryName(category.getName());
+            }
+            LambdaQueryWrapper<SetmealDish> lambdaQueryWrapper = new LambdaQueryWrapper<>();
+            lambdaQueryWrapper.eq(SetmealDish::getSetmealId, item.getId());
+            setmealDto.setSetmealDishes(setmealDishService.list(lambdaQueryWrapper));
+            return setmealDto;
+        }).collect(Collectors.toList());
+        redisTemplate.opsForValue().set(key, setmealDtos);
+        return R.success(setmealDtos);
     }
 }

@@ -14,6 +14,7 @@ import reggie.entity.*;
 import reggie.service.*;
 
 import java.math.BigDecimal;
+import java.sql.Date;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -104,6 +105,29 @@ public class OrdersController {
         Page<OrdersDto> ordersDtoPage = new Page<>(page,pageSize);
         LambdaQueryWrapper<Orders> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Orders::getUserId,BaseContext.getThreadLocal());
+        queryWrapper.orderByDesc(Orders::getCheckoutTime);
+        ordersService.page(ordersPage,queryWrapper);
+        BeanUtils.copyProperties(ordersPage,ordersDtoPage);
+        List<Orders> orders = ordersService.list(queryWrapper);
+        List<OrdersDto> ordersDtos = orders.stream().map((item) -> {
+            OrdersDto ordersDto = new OrdersDto();
+            LambdaQueryWrapper<OrderDetail> lambdaQueryWrapper = new LambdaQueryWrapper<>();
+            lambdaQueryWrapper.eq(OrderDetail::getOrderId, item.getId());
+            List<OrderDetail> list = orderDetailService.list(lambdaQueryWrapper);
+            ordersDto.setOrderDetails(list);
+            BeanUtils.copyProperties(item, ordersDto);
+            return ordersDto;
+        }).collect(Collectors.toList());
+        ordersDtoPage.setRecords(ordersDtos);
+        return R.success(ordersDtoPage);
+    }
+    @GetMapping("/page")
+    public R<Page> page(int page, int pageSize, String number, Date beginTime, Date endTime){
+        Page<Orders> ordersPage = new Page<>(page,pageSize);
+        Page<OrdersDto> ordersDtoPage = new Page<>(page,pageSize);
+        LambdaQueryWrapper<Orders> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(number!=null,Orders::getNumber,number);
+        queryWrapper.between(beginTime!=null,Orders::getOrderTime,beginTime,endTime);
         queryWrapper.orderByDesc(Orders::getCheckoutTime);
         ordersService.page(ordersPage,queryWrapper);
         BeanUtils.copyProperties(ordersPage,ordersDtoPage);
