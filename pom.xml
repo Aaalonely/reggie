@@ -78,6 +78,12 @@
             <artifactId>spring-boot-starter-test</artifactId>
         </dependency>
 
+        <!--   拓展缓存技术的整合     -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+        <!--   含RedisCacheManager     -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
