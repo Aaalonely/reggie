@@ -27,7 +27,12 @@ public class LoginCheckFilter implements Filter {
                 "/employee/login",
                 "/employee/logout",
                 "/user/login",
-                "/user/logout"
+                "/user/logout",
+                "/doc.html",
+                "/webjars/**",
+                "/swagger-resources",
+                "/v2/api-docs"
+
         };
 
         for (String urlm:urls
